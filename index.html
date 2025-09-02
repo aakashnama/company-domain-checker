@@ -43,28 +43,30 @@
           </div>
         </div>
         <p class="text-center text-muted mt-5 mb-1" style="font-size:14px;">
-          This tool checks domain age (WHOIS), SSL status and gives a link to search in India's MCA registry.<br>
-          For reliable results, verify company details from official sources and news.
+          This tool checks domain age (Whois from API Ninjas), SSL status, and gives a direct link to the MCA master data search for Indian companies.<br>
+          Always verify on the official government page and look for reviews or news about the company.
         </p>
       </div>
     </div>
   </div>
 
   <script>
+    // SET YOUR API NINJAS KEY HERE
+    const API_NINJAS_KEY = "YOUR_API_KEY"; // <-- Replace with your API Key
+
     // Simple Bootstrap validation
     (function () {
       'use strict';
       var forms = document.querySelectorAll('#companyForm');
-      Array.prototype.slice.call(forms)
-        .forEach(function (form) {
-          form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-          }, false);
-        });
+      Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
     })();
 
     document.getElementById("companyForm").addEventListener("submit", async function(e) {
@@ -84,43 +86,57 @@
       try {
         domain = new URL(website).hostname.replace(/^www\./, '');
       } catch {
-        domain = website.replace(/^https?:\/\//, '').split("/")[0];
+        domain = website.replace(/^https?:\/\//, '').split("/");
       }
 
-      // WHOIS API (WhoAPI, demo only)
-      // Get your own key at https://whoapi.com
-      let apiKey = "mJdeGdSMKte7U8r5jr76+A==TZj49qQ6YqoFc9NM";
+      // API Ninjas WHOIS
       let creationDate = "";
       let whoisSuccess = false;
+      let errorMsg = null;
       try {
-        
-        let resp = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}&r=whois&apikey=${apiKey}`);
-        let data = await resp.json();
-        if (data.status == 0 && data.date_created) {
-          creationDate = data.date_created;
-          whoisSuccess = true;
+        let resp = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}`, {
+          headers: { 'X-Api-Key': mJdeGdSMKte7U8r5jr76+A==TZj49qQ6YqoFc9NM }
+        });
+        if (resp.ok) {
+          let data = await resp.json();
+          if (data.creation_date) {
+            // Convert from epoch
+            creationDate = new Date(data.creation_date * 1000).toLocaleDateString();
+            whoisSuccess = true;
+          } else {
+            errorMsg = "No creation date found for this domain.";
+          }
+        } else {
+          errorMsg = "API Error: " + resp.status;
         }
-      } catch {}
+      } catch (err) {
+        errorMsg = "Failed to fetch domain info.";
+      }
 
       // SSL check
       let isSSL = website.startsWith("https://");
 
-      // MCA Registry search link (manual)
-      let mcaSearchUrl = "https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do";
+      // MCA Registry - send user to search page (can't pre-fill for security)
+      let mcaSearchUrl =
+        "https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do";
 
-      // Warnings
+      // Warnings and errors
       let warnings = [];
       if (!isSSL) warnings.push("No SSL detected (should use https)");
-      if (!whoisSuccess) warnings.push("Domain WHOIS lookup failed or domain not found");
+      if (!whoisSuccess) warnings.push(errorMsg || "Domain lookup failed or domain not found.");
 
-      let html =
-        `<ul class="list-group mb-2">
+      let html = `
+        <ul class="list-group mb-2">
           <li class="list-group-item"><strong>Domain Age:</strong> ${creationDate ? creationDate : "Unknown"}</li>
           <li class="list-group-item"><strong>SSL Enabled:</strong> ${isSSL ? "Yes" : "No"}</li>
           <li class="list-group-item"><strong>MCA Search:</strong> 
-            <a href="${mcaSearchUrl}" target="_blank" rel="noopener">Manual search (for Indian companies)</a>
+            <a href="${mcaSearchUrl}" target="_blank" rel="noopener">
+              Click here to search for "${company}" in MCA Master Data
+            </a>
+            <br><span style="font-size:12px;">(Enter the company name manually after the page loads.)</span>
           </li>
-        </ul>`;
+        </ul>
+      `;
 
       if (warnings.length > 0) {
         html += `<div class="alert alert-warning"><b>Warnings:</b><ul>`;

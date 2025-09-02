@@ -52,7 +52,7 @@
 
   <script>
     // SET YOUR API NINJAS KEY HERE
-    const API_NINJAS_KEY = "YOUR_API_KEY"; // <-- Replace with your API Key
+    const API_NINJAS_KEY = "mJdeGdSMKte7U8r5jr76+A==TZj49qQ6YqoFc9NM"; // <-- Replace with your API Key
 
     // Simple Bootstrap validation
     (function () {
@@ -95,7 +95,7 @@
       let errorMsg = null;
       try {
         let resp = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}`, {
-          headers: { 'X-Api-Key': mJdeGdSMKte7U8r5jr76+A==TZj49qQ6YqoFc9NM }
+          headers: { 'X-Api-Key': API_NINJAS_KEY }
         });
         if (resp.ok) {
           let data = await resp.json();

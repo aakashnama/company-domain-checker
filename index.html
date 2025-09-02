@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Company Reliability Checker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f7f9fc; }
+    .card { margin-top: 32px; }
+    .result-box { margin-top: 28px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="mb-4 text-center">Company Reliability Checker</h2>
+            <form id="companyForm" novalidate>
+              <div class="mb-3">
+                <label for="companyName" class="form-label">Company Name</label>
+                <input type="text" class="form-control" id="companyName" required>
+                <div class="invalid-feedback">
+                  Please enter a company name.
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="website" class="form-label">Company Website</label>
+                <input type="url" class="form-control" id="website" placeholder="https://example.com" required>
+                <div class="invalid-feedback">
+                  Please enter a valid website URL.
+                </div>
+              </div>
+              
+              <button id="analyzeBtn" class="btn btn-primary w-100" type="submit">
+                Analyze
+              </button>
+            </form>
+            <div id="resultBox" class="result-box"></div>
+          </div>
+        </div>
+        <p class="text-center text-muted mt-5 mb-1" style="font-size:14px;">
+          This tool checks domain age (WHOIS), SSL status and gives a link to search in India's MCA registry.<br>
+          For reliable results, verify company details from official sources and news.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple Bootstrap validation
+    (function () {
+      'use strict';
+      var forms = document.querySelectorAll('#companyForm');
+      Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+          form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+          }, false);
+        });
+    })();
+
+    document.getElementById("companyForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      if (!this.checkValidity()) return;
+
+      document.getElementById("analyzeBtn").disabled = true;
+      document.getElementById("resultBox").innerHTML = `
+        <div class="text-center"><div class="spinner-border"></div></div>
+      `;
+
+      let company = document.getElementById("companyName").value.trim();
+      let website = document.getElementById("website").value.trim();
+
+      // Parse domain from URL
+      let domain;
+      try {
+        domain = new URL(website).hostname.replace(/^www\./, '');
+      } catch {
+        domain = website.replace(/^https?:\/\//, '').split("/")[0];
+      }
+
+      // WHOIS API (WhoAPI, demo only)
+      // Get your own key at https://whoapi.com
+      let apiKey = "mJdeGdSMKte7U8r5jr76+A==TZj49qQ6YqoFc9NM";
+      let creationDate = "";
+      let whoisSuccess = false;
+      try {
+        
+        let resp = await fetch(`https://api.api-ninjas.com/v1/whois?domain=${domain}&r=whois&apikey=${apiKey}`);
+        let data = await resp.json();
+        if (data.status == 0 && data.date_created) {
+          creationDate = data.date_created;
+          whoisSuccess = true;
+        }
+      } catch {}
+
+      // SSL check
+      let isSSL = website.startsWith("https://");
+
+      // MCA Registry search link (manual)
+      let mcaSearchUrl = "https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do";
+
+      // Warnings
+      let warnings = [];
+      if (!isSSL) warnings.push("No SSL detected (should use https)");
+      if (!whoisSuccess) warnings.push("Domain WHOIS lookup failed or domain not found");
+
+      let html =
+        `<ul class="list-group mb-2">
+          <li class="list-group-item"><strong>Domain Age:</strong> ${creationDate ? creationDate : "Unknown"}</li>
+          <li class="list-group-item"><strong>SSL Enabled:</strong> ${isSSL ? "Yes" : "No"}</li>
+          <li class="list-group-item"><strong>MCA Search:</strong> 
+            <a href="${mcaSearchUrl}" target="_blank" rel="noopener">Manual search (for Indian companies)</a>
+          </li>
+        </ul>`;
+
+      if (warnings.length > 0) {
+        html += `<div class="alert alert-warning"><b>Warnings:</b><ul>`;
+        warnings.forEach(w => html += `<li>${w}</li>`);
+        html += "</ul></div>";
+      }
+
+      document.getElementById("resultBox").innerHTML = html;
+      document.getElementById("analyzeBtn").disabled = false;
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
